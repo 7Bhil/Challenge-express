@@ -7,6 +7,8 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const User = require("./models/User");
+const Challenge = require('./models/Challenge');
+
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -21,9 +23,21 @@ app.use(cors({
   origin: process.env.REACT_APP_API_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', , 'X-Requested-With']
 }));
-
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  
+  // Répondre directement aux preflight OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 // ============================================
 // MIDDLEWARES
 // ============================================
@@ -36,9 +50,13 @@ app.use(express.urlencoded({ extended: true }));
 // ============================================
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const challengeRoutes = require('./routes/challengeRoutes');
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/challenges", challengeRoutes);
+// Utilisation des routes
+
 
 // ============================================
 // CONNEXION MONGODB + DÉMARRAGE SERVEUR
@@ -76,3 +94,4 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => {
     console.error("❌ Erreur de connexion à MongoDB :", err);
   });
+// Test du modèle (à ajouter temporairement après mongoose.connect)
