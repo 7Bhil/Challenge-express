@@ -1,95 +1,239 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken")
 
-// Inscription d'un nouvel utilisateur
-// controllers/userController.js
+// Récupérer tous les utilisateurs (Superadmin)
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 });
 
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
 
-// --- Logique d'Inscription (POST /api/users/register) ---
-exports.registerUser = async (req, res) => {
-    // Le corps de la requête contient: name, email, password, passion, role
-    const { name, email, password, passion, role } = req.body;
-    console.log("Données reçues dans req.body:", req.body); 
-
-    if (!name) {
-        // Cette vérification simple vous aidera à déboguer rapidement
-        return res.status(400).json({ message: "Le nom est manquant dans la requête." });
-    }
-
-    try {
-        // 1. On utilise 'name' comme 'username' pour la cohérence avec le front-end
-        const usercounter = await User.countDocuments();
-         let userRole;
-         if (usercounter === 0) {
-             userRole = 'Superadmin'; // Premier utilisateur
-         } else {
-             userRole = role || 'Challenger'; // Rôle par défaut
-         }
-        // 2. Vérification de l'existence (Email ou Nom déjà utilisé)
-        const existingUser = await User.findOne({ $or: [{ email }, { name }] });
-        if (existingUser) {
-            // Statut 409: Conflict est souvent plus précis pour les doublons
-            return res.status(409).json({ message: "Un compte existe déjà avec cet email ou nom." });
-        }
-
-        // 3. Création et Sauvegarde du nouvel utilisateur
-        // Le HACHAGE du mot de passe se fait AUTOMATIQUEMENT dans le hook 'pre-save' du Modèle !
-        const newUser = new User({
-            name,
-            email,
-            password,
-            passion,
-            role: userRole, // 'Challenger' par défaut
-        });
-
-        const savedUser = await newUser.save();
-
-        // 4. Succès de la réponse
-        res.status(201).json({ 
-            message: "Inscription réussie ! Vous pouvez maintenant vous connecter.", 
-            user: { id: savedUser._id, username: savedUser.username }
-        });
-
-    } catch (error) {
-        // En cas d'erreur de validation Mongoose ou autre
-        console.error("Erreur d'inscription:", error.message);
-        res.status(500).json({ message: "Erreur serveur. Veuillez vérifier vos données." });
-    }
+  } catch (error) {
+    console.error('❌ Erreur récupération users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
 };
 
-// Connexion d'un utilisateur existant
-exports.loginUser = async (req, res) => {
-        const { email, password } = req.body;
+// Récupérer un utilisateur par ID
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+// Mettre à jour un utilisateur
+exports.updateUser = async (req, res) => {
+  try {
+    const { name, email, role, passion, level, points, streak } = req.body;
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Mise à jour des champs
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (role) user.role = role;
+    if (passion) user.passion = passion;
+    if (level !== undefined) user.level = level;
+    if (points !== undefined) user.points = points;
+    if (streak !== undefined) user.streak = streak;
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Utilisateur mis à jour avec succès',
+      data: updatedUser
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur mise à jour user:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Supprimer un utilisateur (Superadmin)
+exports.deleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Empêcher la suppression du dernier Superadmin
+    if (user.role === 'Superadmin') {
+      const superadminCount = await User.countDocuments({ role: 'Superadmin' });
+      if (superadminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Impossible de supprimer le dernier Superadmin'
+        });
+      }
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Utilisateur supprimé avec succès'
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+// Inscription d'un nouvel utilisateur
+exports.registerUser = async (req, res) => {
+  const { name, email, password, passion, role } = req.body;
+  console.log("Données reçues dans req.body:", req.body); 
+
+  if (!name) {
+    return res.status(400).json({ message: "Le nom est manquant dans la requête." });
+  }
 
   try {
-    // Trouver l'utilisateur par email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "Email ou mot de passe incorrect" });
+    const usercounter = await User.countDocuments();
+    let userRole;
+    if (usercounter === 0) {
+      userRole = 'Superadmin';
+    } else {
+      userRole = role || 'Challenger';
     }
 
-    // Vérifier le mot de passe
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: "Email ou mot de passe incorrect" });
+    const existingUser = await User.findOne({ $or: [{ email }, { name }] });
+    if (existingUser) {
+      return res.status(409).json({ message: "Un compte existe déjà avec cet email ou nom." });
     }
-    const token = jwt.sign(
-        { id: user._id, role: user.role},
-        process.env.JWT_SECRET,
-        {expiresIn: '1h'}
-    );
 
-    res.status(200).json({ message: "Connexion réussie",
-        token,
-        user: {
-            id: user._id,
-            email: user.email,
-            role: user.role
-        }
+    const newUser = new User({
+      name,
+      email,
+      password,
+      passion,
+      role: userRole,
     });
-  } catch (err) {
-    console.error("Erreur de connexion:", err)
-    res.status(500).json({ message: "Erreur serveur lors de la connexion" });
+
+    const savedUser = await newUser.save();
+
+    res.status(201).json({ 
+      message: "Inscription réussie ! Vous pouvez maintenant vous connecter.", 
+      user: { id: savedUser._id, name: savedUser.name }
+    });
+
+  } catch (error) {
+    console.error("Erreur d'inscription:", error.message);
+    res.status(500).json({ message: "Erreur serveur. Veuillez vérifier vos données." });
   }
-}
+};
+
+// Mettre à jour le profil de l'utilisateur connecté
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, email, passion, avatar } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (passion) user.passion = passion;
+    if (avatar) user.avatar = avatar;
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profil mis à jour avec succès',
+      data: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        passion: updatedUser.passion,
+        level: updatedUser.level,
+        points: updatedUser.points,
+        streak: updatedUser.streak,
+        avatar: updatedUser.avatar
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur mise à jour profil:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Récupérer le leaderboard
+exports.getLeaderboard = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select('name avatar level points streak role')
+      .sort({ points: -1 })
+      .limit(100);
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};

@@ -54,6 +54,23 @@ createdBy: {
     enum: ['active', 'inactive', 'completed'],
     default: 'active'
   },
+  validationStatus: {
+    type: String,
+    enum: ['draft', 'pending', 'approved', 'rejected'],
+    default: 'pending',
+    required: true
+  },
+  validatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  validatedAt: {
+    type: Date
+  },
+  rejectionReason: {
+    type: String,
+    maxlength: 500
+  }
 }, {
   timestamps: true // Ajoute automatiquement createdAt et updatedAt
 });

@@ -7,6 +7,17 @@ exports.createChallenge = async (req, res) => {
     console.log('User:', req.user);
     console.log('Body:', req.body);
     
+    // Déterminer le statut de validation selon le rôle
+    let validationStatus = 'pending';
+    let validatedBy = null;
+    let validatedAt = null;
+
+    if (req.user.role === 'Superadmin') {
+      validationStatus = 'approved';
+      validatedBy = req.user._id;
+      validatedAt = new Date();
+    }
+
     const challengeData = {
       ...req.body,
       createdBy: {
@@ -16,7 +27,10 @@ exports.createChallenge = async (req, res) => {
       },
       technologies: typeof req.body.technologies === 'string' 
         ? req.body.technologies.split(',').map(tech => tech.trim())
-        : req.body.technologies
+        : req.body.technologies,
+      validationStatus,
+      validatedBy,
+      validatedAt
     };
 
     console.log('Challenge data:', challengeData);
@@ -28,7 +42,9 @@ exports.createChallenge = async (req, res) => {
     
     res.status(201).json({
       success: true,
-      message: 'Challenge créé avec succès!',
+      message: validationStatus === 'approved' 
+        ? 'Challenge créé et approuvé automatiquement!' 
+        : 'Challenge créé, en attente de validation par le Superadmin',
       data: savedChallenge
     });
     
@@ -44,7 +60,17 @@ exports.createChallenge = async (req, res) => {
 // Récupérer tous les challenges
 exports.getAllChallenges = async (req, res) => {
   try {
-    const challenges = await Challenge.find().sort({ createdAt: -1 });
+    let filter = {};
+    
+    // Les utilisateurs normaux ne voient que les challenges approuvés
+    // Les Admins et Superadmins voient tous les challenges
+    if (req.user && (req.user.role === 'Superadmin' || req.user.role === 'Admin')) {
+      // Pas de filtre, voir tous les challenges
+    } else {
+      filter.validationStatus = 'approved';
+    }
+
+    const challenges = await Challenge.find(filter).sort({ createdAt: -1 });
     
     res.status(200).json({
       success: true,

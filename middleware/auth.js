@@ -31,4 +31,5 @@ const auth = async (req, res, next) => {
   }
 };
 
-module.exports = { auth };
+// Export avec les deux noms pour compatibilité
+module.exports = { auth, protect: auth };
