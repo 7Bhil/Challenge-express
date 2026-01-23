@@ -30,6 +30,16 @@ const challengeSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  xpPoints: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  financialReward: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   // REMPLACE createdBy par :
 createdBy: {
   type: {

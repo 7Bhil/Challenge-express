@@ -10,6 +10,14 @@ exports.promoteUser = async (req, res) => {
   try {
     const { userId, newRole } = req.body;
 
+    // Empêcher l'auto-promotion (sécurité)
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous ne pouvez pas modifier votre propre rôle'
+      });
+    }
+
     // Vérifier que seul le Superadmin peut promouvoir
     if (req.user.role !== 'Superadmin') {
       return res.status(403).json({
@@ -57,6 +65,14 @@ exports.promoteUser = async (req, res) => {
 exports.demoteUser = async (req, res) => {
   try {
     const { userId, newRole } = req.body;
+
+    // Empêcher l'auto-rétrogradation
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous ne pouvez pas modifier votre propre rôle'
+      });
+    }
 
     // Vérifier que seul le Superadmin peut rétrograder
     if (req.user.role !== 'Superadmin') {

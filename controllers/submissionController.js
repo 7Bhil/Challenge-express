@@ -63,7 +63,10 @@ exports.getAllSubmissions = async (req, res) => {
     const { status, challengeId } = req.query;
     const filter = {};
 
-    if (status) filter.status = status;
+    if (status) {
+      const statuses = status.split(',');
+      filter.status = { $in: statuses };
+    }
     if (challengeId) filter.challenge = challengeId;
 
     const submissions = await Submission.find(filter)

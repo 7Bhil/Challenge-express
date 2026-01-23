@@ -1,4 +1,5 @@
 const Challenge = require('../models/Challenge');
+const mongoose = require('mongoose');
 
 // Créer un nouveau challenge
 exports.createChallenge = async (req, res) => {
@@ -60,17 +61,44 @@ exports.createChallenge = async (req, res) => {
 // Récupérer tous les challenges
 exports.getAllChallenges = async (req, res) => {
   try {
-    let filter = {};
+    let matchStage = {};
     
-    // Les utilisateurs normaux ne voient que les challenges approuvés
-    // Les Admins et Superadmins voient tous les challenges
+    // Les utilisateurs normaux ne voient que les challenges approuvés et non expirés
     if (req.user && (req.user.role === 'Superadmin' || req.user.role === 'Admin')) {
-      // Pas de filtre, voir tous les challenges
+      // Admins voient tout
     } else {
-      filter.validationStatus = 'approved';
+      matchStage = {
+        validationStatus: 'approved',
+        endDate: { $gte: new Date() } // Date de fin doit être dans le futur
+      };
     }
 
-    const challenges = await Challenge.find(filter).sort({ createdAt: -1 });
+    const challenges = await Challenge.aggregate([
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: 'submissions',
+          localField: '_id',
+          foreignField: 'challenge',
+          as: 'submissions'
+        }
+      },
+      {
+        $addFields: {
+          participantCount: {
+            $size: {
+              $setUnion: ["$submissions.user", []] // Obtenir les utilisateurs uniques
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          submissions: 0 // Ne pas renvoyer les soumissions complètes pour alléger
+        }
+      }
+    ]);
     
     res.status(200).json({
       success: true,
@@ -79,6 +107,7 @@ exports.getAllChallenges = async (req, res) => {
     });
     
   } catch (error) {
+    console.error('Erreur getAllChallenges:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur'
@@ -89,9 +118,35 @@ exports.getAllChallenges = async (req, res) => {
 // Récupérer un challenge par ID
 exports.getChallengeById = async (req, res) => {
   try {
-    const challenge = await Challenge.findById(req.params.id);
-    
-    if (!challenge) {
+    const challengeId = new mongoose.Types.ObjectId(req.params.id);
+
+    const challenges = await Challenge.aggregate([
+      { $match: { _id: challengeId } },
+      {
+        $lookup: {
+          from: 'submissions',
+          localField: '_id',
+          foreignField: 'challenge',
+          as: 'submissions'
+        }
+      },
+      {
+        $addFields: {
+          participantCount: {
+            $size: {
+              $setUnion: ["$submissions.user", []]
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          submissions: 0
+        }
+      }
+    ]);
+
+    if (!challenges.length) {
       return res.status(404).json({
         success: false,
         message: 'Challenge non trouvé'
@@ -100,10 +155,11 @@ exports.getChallengeById = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      data: challenge
+      data: challenges[0]
     });
     
   } catch (error) {
+    console.error('Erreur getChallengeById:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur'

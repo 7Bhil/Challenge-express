@@ -35,7 +35,6 @@ const submissionSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: [true, 'La description est obligatoire'],
     trim: true,
     maxlength: [1000, 'La description ne peut pas dépasser 1000 caractères']
   },
