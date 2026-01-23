@@ -25,7 +25,21 @@ streak: { type: Number, default: 0 },
 avatar: { 
   type: String, 
   default: "https://api.dicebear.com/7.x/avataaars/svg?seed=anonymous" 
-}
+  },
+  badges: [{
+    badge: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Badge'
+    },
+    count: {
+      type: Number,
+      default: 1
+    },
+    earnedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 });
 userSchema.pre('save', async function(next) {
     // 1. On vérifie si le mot de passe a été modifié ou s'il est nouveau

@@ -1,6 +1,7 @@
 const Submission = require('../models/Submission');
 const User = require('../models/User');
 const Challenge = require('../models/Challenge');
+const { checkAndAwardBadges } = require('../utils/badgeEngine');
 
 // Créer une nouvelle soumission
 exports.createSubmission = async (req, res) => {
@@ -196,6 +197,9 @@ exports.scoreSubmission = async (req, res) => {
       // Calculer le niveau basé sur les points
       user.level = Math.floor(user.points / 100) + 1;
       await user.save();
+      
+      // Vérifier les nouveaux badges
+      await checkAndAwardBadges(user._id);
     }
 
     res.status(200).json({

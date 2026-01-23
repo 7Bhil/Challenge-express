@@ -11,5 +11,6 @@ router.get('/challenges/pending', protect, isSuperadmin, adminController.getPend
 router.patch('/challenges/:id/approve', protect, isSuperadmin, adminController.approveChallenge);
 router.patch('/challenges/:id/reject', protect, isSuperadmin, adminController.rejectChallenge);
 router.get('/stats', protect, isSuperadmin, adminController.getStats);
+router.patch('/challenges/:id/finalize', protect, isSuperadmin, adminController.finalizeChallenge);
 
 module.exports = router;

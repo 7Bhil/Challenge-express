@@ -39,12 +39,14 @@ const userRoutes = require("./routes/userRoutes");
 const challengeRoutes = require('./routes/challengeRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const badgeRoutes = require('./routes/badgeRoutes');
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/challenges", challengeRoutes);
 app.use("/api/submissions", submissionRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/badges", badgeRoutes);
 
 
 // ============================================

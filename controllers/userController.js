@@ -26,7 +26,9 @@ exports.getAllUsers = async (req, res) => {
 // Récupérer un utilisateur par ID
 exports.getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate('badges.badge');
 
     if (!user) {
       return res.status(404).json({

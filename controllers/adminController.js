@@ -1,5 +1,7 @@
-const User = require('../models/User');
 const Challenge = require('../models/Challenge');
+const Submission = require('../models/Submission');
+const { awardBadge } = require('../utils/badgeEngine');
+const Badge = require('../models/Badge');
 
 // ============================================
 // GESTION DES UTILISATEURS (Admin/Superadmin)
@@ -249,5 +251,51 @@ exports.getStats = async (req, res) => {
       success: false,
       message: 'Erreur serveur'
     });
+  }
+};
+
+// Finaliser un challenge et attribuer les badges podium
+exports.finalizeChallenge = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const challenge = await Challenge.findById(id);
+
+    if (!challenge) {
+      return res.status(404).json({ success: false, message: 'Challenge non trouvé' });
+    }
+
+    challenge.status = 'completed';
+    await challenge.save();
+
+    const submissions = await Submission.find({ challenge: id })
+      .sort({ finalScore: -1 })
+      .limit(3)
+      .populate('user');
+
+    const goldBadge = await Badge.findOne({ requirementType: 'ranking_top3', requirementValue: 1 });
+    const silverBadge = await Badge.findOne({ requirementType: 'ranking_top3', requirementValue: 2 });
+    const bronzeBadge = await Badge.findOne({ requirementType: 'ranking_top3', requirementValue: 3 });
+
+    const podiumBadges = [goldBadge, silverBadge, bronzeBadge];
+
+    for (let i = 0; i < submissions.length; i++) {
+        const winner = submissions[i].user;
+        const rankBadge = podiumBadges[i];
+  
+        if (winner && rankBadge) {
+          await awardBadge(winner, rankBadge._id, true);
+          await winner.save();
+        }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Challenge finalisé et badges attribués au podium !',
+      data: submissions.map(s => ({ user: s.user.name, score: s.finalScore }))
+    });
+
+  } catch (error) {
+    console.error('Erreur finalisation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
