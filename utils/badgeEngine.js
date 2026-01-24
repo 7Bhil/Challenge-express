@@ -1,5 +1,6 @@
 const Badge = require('../models/Badge');
 const User = require('../models/User');
+const Submission = require('../models/Submission');
 
 const checkAndAwardBadges = async (userId) => {
   try {
@@ -8,6 +9,13 @@ const checkAndAwardBadges = async (userId) => {
 
     // Récupérer tous les badges disponibles
     const allBadges = await Badge.find({});
+    
+    // Récupérer le nombre de soumissions de l'utilisateur
+    const submissionsCount = await Submission.countDocuments({ user: userId });
+    
+    // Vérifier si l'utilisateur a un score parfait (dernière soumission)
+    const lastSubmission = await Submission.findOne({ user: userId }).sort({ createdAt: -1 });
+    const hasPerfectScore = lastSubmission && lastSubmission.finalScore === 100; // Si le score est sur 100
 
     for (const badge of allBadges) {
       let qualifies = false;
@@ -18,19 +26,21 @@ const checkAndAwardBadges = async (userId) => {
           if (user.points >= badge.requirementValue) qualifies = true;
           break;
         case 'submissions':
-          // Logique pour compter les soumissions (peut-être ajouter un champ submissionsCount dans User pour optimiser?)
-          // Pour l'instant on simule ou on fait une requête si nécessaire
+          if (submissionsCount >= badge.requirementValue) qualifies = true;
           break;
         case 'streak':
           if (user.streak >= badge.requirementValue) qualifies = true;
           break;
+        case 'perfect_score':
+          if (hasPerfectScore) qualifies = true;
+          break;
         case 'ranking_top3':
-          // Cette partie sera gérée manuellement ou via une logique de podium
+          // Géré par le finalizeChallenge ou podium interactif
           break;
       }
 
       if (qualifies) {
-        await awardBadge(user, badge);
+        await awardBadge(user, badge._id);
       }
     }
 
@@ -42,9 +52,10 @@ const checkAndAwardBadges = async (userId) => {
 
 const awardBadge = async (user, badgeId, isRanking = false) => {
     // Vérifier si l'utilisateur l'a déjà
-    const existingBadgeIndex = user.badges.findIndex(b => 
-        b.badge._id.toString() === badgeId.toString() || b.badge.toString() === badgeId.toString()
-    );
+    const existingBadgeIndex = user.badges.findIndex(b => {
+        const bId = b.badge && b.badge._id ? b.badge._id.toString() : (b.badge ? b.badge.toString() : null);
+        return bId === badgeId.toString();
+    });
 
     if (existingBadgeIndex !== -1) {
         // Si c'est un badge de classement (Top 1, 2, 3), on incrémente le multiplicateur

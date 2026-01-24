@@ -299,3 +299,36 @@ exports.finalizeChallenge = async (req, res) => {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };
+
+// Supprimer un challenge (Superadmin uniquement)
+exports.deleteChallenge = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const challenge = await Challenge.findById(id);
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Challenge non trouvé'
+      });
+    }
+
+    // Supprimer les soumissions associées
+    await Submission.deleteMany({ challenge: id });
+
+    // Supprimer le challenge
+    await Challenge.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Challenge et toutes les soumissions associées ont été supprimés avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur suppression challenge:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};

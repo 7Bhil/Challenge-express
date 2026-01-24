@@ -42,6 +42,24 @@ const badges = [
     requirementValue: 1
   },
   {
+    name: "⭐ Étoile Montante",
+    description: "Atteindre 500 points d'expérience",
+    icon: "Star",
+    rarity: "Silver",
+    category: "Milestone",
+    requirementType: "points",
+    requirementValue: 500
+  },
+  {
+    name: "👑 Roi du Code",
+    description: "Atteindre 5000 points d'expérience",
+    icon: "Crown",
+    rarity: "Gold",
+    category: "Milestone",
+    requirementType: "points",
+    requirementValue: 5000
+  },
+  {
     name: "✨ Clean Coder",
     description: "Obtenir un score parfait en qualité de code (20/20)",
     icon: "Code",

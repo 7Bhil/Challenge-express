@@ -63,14 +63,29 @@ exports.getAllChallenges = async (req, res) => {
   try {
     let matchStage = {};
     
-    // Les utilisateurs normaux ne voient que les challenges approuvés et non expirés
+    // Les utilisateurs normaux ne voient que les challenges approuvés et non expirés, 
+    // SAUF s'ils demandent explicitement les archives (pour le leaderboard)
     if (req.user && (req.user.role === 'Superadmin' || req.user.role === 'Admin')) {
       // Admins voient tout
+      if (req.query.status) {
+        matchStage.status = req.query.status;
+      }
     } else {
-      matchStage = {
-        validationStatus: 'approved',
-        endDate: { $gte: new Date() } // Date de fin doit être dans le futur
-      };
+      if (req.query.type === 'archived') {
+        matchStage = {
+          validationStatus: 'approved',
+          $or: [
+            { endDate: { $lt: new Date() } },
+            { status: 'completed' }
+          ]
+        };
+      } else {
+        matchStage = {
+          validationStatus: 'approved',
+          endDate: { $gte: new Date() },
+          status: 'active'
+        };
+      }
     }
 
     const challenges = await Challenge.aggregate([
@@ -166,3 +181,33 @@ exports.getChallengeById = async (req, res) => {
     });
   }
 };
+
+// Récupérer le classement d'un challenge
+exports.getChallengeLeaderboard = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Submission = require('../models/Submission');
+
+    const leaderboard = await Submission.find({
+      challenge: id,
+      status: { $in: ['approved', 'under_review'] },
+      finalScore: { $gt: 0 }
+    })
+    .populate('user', 'name avatar level')
+    .sort({ finalScore: -1 })
+    .limit(100);
+
+    res.status(200).json({
+      success: true,
+      data: leaderboard
+    });
+  } catch (error) {
+    console.error('Erreur getChallengeLeaderboard:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+module.exports = exports;

@@ -12,5 +12,6 @@ router.patch('/challenges/:id/approve', protect, isSuperadmin, adminController.a
 router.patch('/challenges/:id/reject', protect, isSuperadmin, adminController.rejectChallenge);
 router.get('/stats', protect, isSuperadmin, adminController.getStats);
 router.patch('/challenges/:id/finalize', protect, isSuperadmin, adminController.finalizeChallenge);
+router.delete('/challenges/:id', protect, isSuperadmin, adminController.deleteChallenge);
 
 module.exports = router;

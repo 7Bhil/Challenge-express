@@ -7,5 +7,6 @@ const { auth } = require('../middleware/auth');
 router.post('/', auth, challengeController.createChallenge); // SEULEMENT celle-ci protégée
 router.get('/', challengeController.getAllChallenges); // SANS auth
 router.get('/:id', challengeController.getChallengeById); // SANS auth
+router.get('/:id/leaderboard', challengeController.getChallengeLeaderboard); // SANS auth
 
 module.exports = router;
