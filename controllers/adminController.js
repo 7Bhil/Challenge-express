@@ -1,4 +1,5 @@
 const Challenge = require('../models/Challenge');
+const User = require('../models/User');
 const Submission = require('../models/Submission');
 const { awardBadge } = require('../utils/badgeEngine');
 const Badge = require('../models/Badge');
@@ -326,6 +327,47 @@ exports.deleteChallenge = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erreur suppression challenge:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+// Supprimer un utilisateur (Superadmin uniquement)
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Empêcher l'auto-suppression
+    if (id === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous ne pouvez pas supprimer votre propre compte depuis cet espace'
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Supprimer les soumissions de l'utilisateur
+    await Submission.deleteMany({ user: id });
+
+    // Supprimer l'utilisateur
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Utilisateur et toutes ses soumissions ont été supprimés avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur suppression utilisateur:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur'

@@ -14,4 +14,7 @@ router.get('/stats', protect, isSuperadmin, adminController.getStats);
 router.patch('/challenges/:id/finalize', protect, isSuperadmin, adminController.finalizeChallenge);
 router.delete('/challenges/:id', protect, isSuperadmin, adminController.deleteChallenge);
 
+// Gestion Users (Delete)
+router.delete('/users/:id', protect, isSuperadmin, adminController.deleteUser);
+
 module.exports = router;
