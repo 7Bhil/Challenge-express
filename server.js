@@ -8,6 +8,7 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const User = require("./models/User");
 const Challenge = require('./models/Challenge');
+const initializeSuperadmin = require('./utils/adminInitializer');
 
 
 // Charger les variables d'environnement
@@ -55,6 +56,9 @@ app.use("/api/badges", badgeRoutes);
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connecté");
+
+    // Initialiser le Superadmin
+    await initializeSuperadmin();
 
     // Lancer le serveur
     const PORT = process.env.PORT || 5000;
