@@ -210,4 +210,60 @@ exports.getChallengeLeaderboard = async (req, res) => {
   }
 };
 
+// Se porter volontaire comme jury pour un challenge
+exports.volunteerAsJudge = async (req, res) => {
+  try {
+    const challenge = await Challenge.findById(req.params.id);
+    if (!challenge) {
+      return res.status(404).json({ success: false, message: 'Challenge non trouvé' });
+    }
+
+    // Autoriser Jury, Admin et Superadmin
+    if (req.user.role !== 'Jury' && req.user.role !== 'Admin' && req.user.role !== 'Superadmin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Seuls les membres du jury ou les admins peuvent se porter volontaires' 
+      });
+    }
+
+    if (challenge.judges.includes(req.user._id)) {
+      return res.status(400).json({ success: false, message: 'Vous êtes déjà jury pour ce challenge' });
+    }
+
+    challenge.judges.push(req.user._id);
+    await challenge.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Vous êtes maintenant jury pour ce challenge',
+      data: challenge
+    });
+  } catch (error) {
+    console.error('Erreur volunteerAsJudge:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// Se retirer du jury d'un challenge
+exports.leaveJudgeRole = async (req, res) => {
+  try {
+    const challenge = await Challenge.findById(req.params.id);
+    if (!challenge) {
+      return res.status(404).json({ success: false, message: 'Challenge non trouvé' });
+    }
+
+    challenge.judges = challenge.judges.filter(id => id.toString() !== req.user._id.toString());
+    await challenge.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Vous n'êtes plus jury pour ce challenge",
+      data: challenge
+    });
+  } catch (error) {
+    console.error('Erreur leaveJudgeRole:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 module.exports = exports;

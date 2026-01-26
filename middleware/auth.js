@@ -31,5 +31,26 @@ const auth = async (req, res, next) => {
   }
 };
 
+const optionalAuth = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    
+    if (user) {
+      req.user = user;
+    }
+    next();
+  } catch (error) {
+    // On ignore l'erreur et on continue en anonyme
+    next();
+  }
+};
+
 // Export avec les deux noms pour compatibilité
-module.exports = { auth, protect: auth };
+module.exports = { auth, protect: auth, optionalAuth };

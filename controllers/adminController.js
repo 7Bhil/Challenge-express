@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Submission = require('../models/Submission');
 const { awardBadge } = require('../utils/badgeEngine');
 const Badge = require('../models/Badge');
+const { createNotification } = require('../utils/notificationHelper');
 
 // ============================================
 // GESTION DES UTILISATEURS (Admin/Superadmin)
@@ -167,6 +168,30 @@ exports.approveChallenge = async (req, res) => {
 
     await challenge.save();
 
+    // Notifier le créateur du challenge
+    if (challenge.createdBy && challenge.createdBy.user) {
+      await createNotification({
+        recipient: challenge.createdBy.user,
+        type: 'info',
+        message: `Bonne nouvelle ! Votre challenge "${challenge.title}" a été approuvé et est maintenant en ligne.`,
+        link: `/challenges/${challenge._id}`
+      });
+    }
+
+    // Notifier TOUS les utilisateurs du nouveau challenge
+    const allUsers = await User.find({ _id: { $ne: req.user._id } }, '_id'); // Exclure l'admin qui valide
+    
+    // Pour des performances optimales sur de grosses bases, on ferait ça en async ou avec un message broadcast
+    // Ici on boucle car la base est probablement petite
+    const notificationPromises = allUsers.map(u => createNotification({
+      recipient: u._id,
+      type: 'challenge_created',
+      message: `Nouveau Challenge disponible : "${challenge.title}" ! Venez participer !`,
+      link: `/challenges/${challenge._id}`
+    }));
+    
+    await Promise.all(notificationPromises);
+
     res.status(200).json({
       success: true,
       message: 'Challenge approuvé avec succès',
@@ -203,6 +228,16 @@ exports.rejectChallenge = async (req, res) => {
     challenge.status = 'inactive';
 
     await challenge.save();
+
+    // Notifier le créateur du challenge
+    if (challenge.createdBy && challenge.createdBy.user) {
+      await createNotification({
+        recipient: challenge.createdBy.user,
+        type: 'info',
+        message: `Votre challenge "${challenge.title}" a été refusé. Motif: ${reason}`,
+        link: `/dashboard` // Ou vers la page d'édition si elle existe
+      });
+    }
 
     res.status(200).json({
       success: true,

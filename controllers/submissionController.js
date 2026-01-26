@@ -2,6 +2,7 @@ const Submission = require('../models/Submission');
 const User = require('../models/User');
 const Challenge = require('../models/Challenge');
 const { checkAndAwardBadges } = require('../utils/badgeEngine');
+const { createNotification } = require('../utils/notificationHelper');
 
 // Créer une nouvelle soumission
 exports.createSubmission = async (req, res) => {
@@ -202,6 +203,15 @@ exports.scoreSubmission = async (req, res) => {
       await checkAndAwardBadges(user._id);
     }
 
+    // Créer une notification pour l'utilisateur
+    await createNotification({
+      recipient: submission.user,
+      sender: req.user._id,
+      type: 'submission_graded',
+      message: `Votre soumission pour le challenge "${submission.challenge.title}" a été notée. Score: ${submission.finalScore}/100`,
+      link: `/dashboard/submissions/${submission._id}`
+    });
+
     res.status(200).json({
       success: true,
       message: 'Note enregistrée avec succès',
@@ -232,6 +242,14 @@ exports.approveSubmission = async (req, res) => {
     submission.status = 'approved';
     await submission.save();
 
+    // Créer une notification pour l'utilisateur
+    await createNotification({
+      recipient: submission.user,
+      type: 'info',
+      message: `Félicitations ! Votre soumission pour "${submission.challenge.title}" a été approuvée par l'administration.`,
+      link: `/dashboard/submissions/${submission._id}`
+    });
+
     res.status(200).json({
       success: true,
       message: 'Soumission approuvée',
@@ -260,6 +278,14 @@ exports.rejectSubmission = async (req, res) => {
 
     submission.status = 'rejected';
     await submission.save();
+
+    // Créer une notification pour l'utilisateur
+    await createNotification({
+      recipient: submission.user,
+      type: 'info',
+      message: `Votre soumission pour "${submission.challenge.title}" n'a pas été retenue. Consultez les retours pour plus de détails.`,
+      link: `/dashboard/submissions/${submission._id}`
+    });
 
     res.status(200).json({
       success: true,

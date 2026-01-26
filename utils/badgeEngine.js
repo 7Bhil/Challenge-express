@@ -1,6 +1,7 @@
 const Badge = require('../models/Badge');
 const User = require('../models/User');
 const Submission = require('../models/Submission');
+const { createNotification } = require('./notificationHelper');
 
 const checkAndAwardBadges = async (userId) => {
   try {
@@ -71,6 +72,19 @@ const awardBadge = async (user, badgeId, isRanking = false) => {
             count: 1,
             earnedAt: new Date()
         });
+
+        // Envoyer la notification
+        // Note: On pourrait peupler le badge pour avoir son nom, 
+        // ou le faire depuis checkAndAwardBadges
+        const fullBadge = await Badge.findById(badgeId);
+        if (fullBadge) {
+          await createNotification({
+            recipient: user._id,
+            type: 'badge_earned',
+            message: `Félicitations ! Vous avez remporté le badge : ${fullBadge.name}`,
+            link: '/profile' // Ou vers une page de badges
+          });
+        }
     }
 };
 

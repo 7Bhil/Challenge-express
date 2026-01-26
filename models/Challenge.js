@@ -80,7 +80,11 @@ createdBy: {
   rejectionReason: {
     type: String,
     maxlength: 500
-  }
+  },
+  judges: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true // Ajoute automatiquement createdAt et updatedAt
 });
