@@ -382,6 +382,14 @@ exports.deleteUser = async (req, res) => {
       });
     }
 
+    // Désactivé à la demande de l'utilisateur
+    return res.status(403).json({
+      success: false,
+      message: 'La suppression de profil n\'est pas autorisée. Vous pouvez uniquement promouvoir ou rétrograder les membres.'
+    });
+
+    // Code original désactivé :
+    /*
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({
@@ -400,6 +408,7 @@ exports.deleteUser = async (req, res) => {
       success: true,
       message: 'Utilisateur et toutes ses soumissions ont été supprimés avec succès'
     });
+    */
 
   } catch (error) {
     console.error('❌ Erreur suppression utilisateur:', error);

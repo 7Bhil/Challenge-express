@@ -8,16 +8,19 @@ exports.createChallenge = async (req, res) => {
     console.log('User:', req.user);
     console.log('Body:', req.body);
     
-    // Déterminer le statut de validation selon le rôle
-    let validationStatus = 'pending';
-    let validatedBy = null;
-    let validatedAt = null;
-
-    if (req.user.role === 'Superadmin') {
-      validationStatus = 'approved';
-      validatedBy = req.user._id;
-      validatedAt = new Date();
+    // Vérifier les permissions : Seuls les Admin/Superadmin peuvent créer des challenges
+    if (req.user.role !== 'Admin' && req.user.role !== 'Superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Seuls les administrateurs peuvent créer des challenges.'
+      });
     }
+
+    // Déterminer le statut de validation
+    // Comme seuls les admins peuvent créer, on auto-approuve par défaut (ou on peut changer selon la logique métier)
+    let validationStatus = 'approved';
+    let validatedBy = req.user._id;
+    let validatedAt = new Date();
 
     const challengeData = {
       ...req.body,
@@ -263,6 +266,92 @@ exports.leaveJudgeRole = async (req, res) => {
   } catch (error) {
     console.error('Erreur leaveJudgeRole:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+// Mettre à jour un challenge
+exports.updateChallenge = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Vérifier les permissions
+    if (req.user.role !== 'Admin' && req.user.role !== 'Superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé. Seuls les administrateurs peuvent modifier des challenges.'
+      });
+    }
+
+    let challenge = await Challenge.findById(id);
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Challenge non trouvé'
+      });
+    }
+
+    // Mise à jour
+    const updateData = { ...req.body };
+    
+    // Gestion des technologies si chaîne de caractères
+    if (updateData.technologies && typeof updateData.technologies === 'string') {
+      updateData.technologies = updateData.technologies.split(',').map(tech => tech.trim());
+    }
+
+    challenge = await Challenge.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Challenge mis à jour avec succès',
+      data: challenge
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur mise à jour challenge:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Supprimer un challenge
+exports.deleteChallenge = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier les permissions
+    if (req.user.role !== 'Admin' && req.user.role !== 'Superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Accès refusé'
+      });
+    }
+
+    const challenge = await Challenge.findById(id);
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Challenge non trouvé'
+      });
+    }
+
+    await challenge.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Challenge supprimé avec succès'
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur suppression challenge:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
   }
 };
 

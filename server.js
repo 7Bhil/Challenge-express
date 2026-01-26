@@ -8,8 +8,10 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 const User = require("./models/User");
 const Challenge = require('./models/Challenge');
+const Message = require('./models/Message');
 const initializeSuperadmin = require('./utils/adminInitializer');
 
+const messageRoutes = require('./routes/messageRoutes'); // Import message routes
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -63,7 +65,63 @@ app.use("/api/submissions", submissionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/badges", badgeRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/messages", messageRoutes);
 
+
+// ============================================
+// SOCKET.IO CONFIGURATION
+// ============================================
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+
+// ... (existing code)
+
+
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  socket.on('join_room', (room) => {
+    socket.join(room);
+    console.log(`User ${socket.id} joined room ${room}`);
+  });
+
+  socket.on('send_message', async (data) => {
+    // data = { room, author, authorId, message, time, role, avatar }
+    
+    // Save to MongoDB
+    try {
+      const newMessage = new Message({
+        room: data.room,
+        author: data.author,
+        authorId: data.authorId,
+        role: data.role,
+        message: data.message,
+        avatar: data.avatar,
+        time: data.time
+      });
+      await newMessage.save();
+      
+      // Emit to room
+      io.to(data.room).emit('receive_message', data);
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
 
 // ============================================
 // CONNEXION MONGODB + DÉMARRAGE SERVEUR
@@ -75,11 +133,12 @@ mongoose.connect(process.env.MONGO_URI)
     // Initialiser le Superadmin
     await initializeSuperadmin();
 
-    // Lancer le serveur
+    // Lancer le serveur (via server.listen et non app.listen pour Socket.io)
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
       console.log(`🌐 CORS activé pour ${process.env.REACT_APP_API_URL}`);
+      console.log(`🔌 Socket.io prêt`);
     });
   })
   .catch(err => {

@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
   // Dans models/User.js, ajoute :
 level: { type: Number, default: 1 },
 points: { type: Number, default: 0 },
+xp: { type: Number, default: 0 },
 streak: { type: Number, default: 0 },
 avatar: { 
   type: String, 

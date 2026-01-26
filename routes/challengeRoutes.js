@@ -7,6 +7,8 @@ const { auth, optionalAuth } = require('../middleware/auth');
 router.post('/', auth, challengeController.createChallenge); // SEULEMENT celle-ci protégée
 router.get('/', optionalAuth, challengeController.getAllChallenges); 
 router.get('/:id', optionalAuth, challengeController.getChallengeById); 
+router.put('/:id', auth, challengeController.updateChallenge); // Nouvelle route UPDATE
+router.delete('/:id', auth, challengeController.deleteChallenge); // Nouvelle route DELETE
 router.get('/:id/leaderboard', optionalAuth, challengeController.getChallengeLeaderboard); 
 
 // Jury management

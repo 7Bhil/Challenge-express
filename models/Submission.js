@@ -13,25 +13,20 @@ const submissionSchema = new mongoose.Schema({
   },
   githubUrl: {
     type: String,
-    required: [true, 'L\'URL GitHub est obligatoire'],
     trim: true,
-    validate: {
-      validator: function(v) {
-        return /^https?:\/\/(www\.)?github\.com\/.+/.test(v);
-      },
-      message: 'URL GitHub invalide'
-    }
+    // La validation se fera au niveau du contrôleur selon le type de challenge
   },
   liveUrl: {
     type: String,
-    trim: true,
-    validate: {
-      validator: function(v) {
-        if (!v) return true; // Optionnel
-        return /^https?:\/\/.+/.test(v);
-      },
-      message: 'URL invalide'
-    }
+    trim: true
+  },
+  fileUrl: {
+    type: String,
+    trim: true
+  },
+  submittedPassword: {
+    type: String,
+    trim: true
   },
   description: {
     type: String,

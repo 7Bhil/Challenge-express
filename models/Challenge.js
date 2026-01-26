@@ -30,10 +30,11 @@ const challengeSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
-  xpPoints: {
+  xpReward: {
     type: Number,
-    default: 0,
-    min: 0
+    default: 200,
+    min: 0,
+    max: 1000
   },
   financialReward: {
     type: Number,
@@ -80,6 +81,16 @@ createdBy: {
   rejectionReason: {
     type: String,
     maxlength: 500
+  },
+  submissionType: {
+    type: String,
+    enum: ['full', 'file', 'password'],
+    default: 'full',
+    required: true
+  },
+  correctPassword: { // Optinel, si type === 'password'
+    type: String,
+    trim: true
   },
   judges: [{
     type: mongoose.Schema.Types.ObjectId,
