@@ -61,3 +61,8 @@ exports.checkAuth = async (req, res) => {
     res.status(401).json({ error: 'Non authentifié' });
   }
 };
+
+// Ping pour le keep-alive
+exports.ping = (req, res) => {
+  res.status(200).send('pong');
+};
