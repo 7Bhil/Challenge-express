@@ -25,7 +25,7 @@ xp: { type: Number, default: 0 },
 streak: { type: Number, default: 0 },
 avatar: { 
   type: String, 
-  default: "https://api.dicebear.com/7.x/avataaars/svg?seed=anonymous" 
+  default: "" 
   },
   badges: [{
     badge: {

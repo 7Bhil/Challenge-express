@@ -190,6 +190,7 @@ exports.updateProfile = async (req, res) => {
     if (email) user.email = email;
     if (passion) user.passion = passion;
     if (avatar) user.avatar = avatar;
+    if (req.body.password) user.password = req.body.password;
 
     const updatedUser = await user.save();
 
