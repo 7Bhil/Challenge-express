@@ -52,7 +52,7 @@ const badges = [
   },
   {
     name: "👑 Roi du Code",
-    description: "Atteindre 5000 points d'expérience",
+    description: "Atteindre 1000 points d'expérience",
     icon: "Crown",
     rarity: "Gold",
     category: "Milestone",
