@@ -73,6 +73,9 @@ exports.getAllChallenges = async (req, res) => {
       if (req.query.status) {
         matchStage.status = req.query.status;
       }
+    } else if (req.user && req.user.role === 'Jury') {
+      // Les juges voient tous les challenges approuvés (même expirés)
+      matchStage.validationStatus = 'approved';
     } else {
       if (req.query.type === 'archived') {
         matchStage = {
