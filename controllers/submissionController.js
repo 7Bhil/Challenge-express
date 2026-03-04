@@ -113,7 +113,7 @@ exports.getAllSubmissions = async (req, res) => {
 
     const submissions = await Submission.find(filter)
       .populate('user', 'name email avatar')
-      .populate('challenge', 'title difficulty')
+      .populate('challenge', 'title difficulty submissionType correctPassword')
       .populate('scores.jury', 'name')
       .sort({ createdAt: -1 });
 
