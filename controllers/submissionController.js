@@ -231,38 +231,42 @@ exports.scoreSubmission = async (req, res) => {
 
     await submission.save();
 
-    // Mettre à jour les points de l'utilisateur
-    const user = await User.findById(submission.user);
-    if (user) {
-      // Points for Leaderboard (based on grades)
-      user.points += submission.pointsEarned;
-      
-      // XP for Leveling (Fixed reward for participating/completing)
-      // Only award XP if this is the first time it's being graded/validated to avoid duplicates if re-graded? 
-      // For simplicity, let's assume we add it now. Ideally we should track if XP was already awarded for this challenge.
-      // But the current logic adds points every time `scoreSubmission` is called? 
-      // User says "on gagne 200 xp par challenge". 
-      // If a user is re-graded, we shouldn't add points again? 
-      // The current code: `user.points += submission.pointsEarned`. If I re-grade, `submission.pointsEarned` might change. 
-      // But we shouldn't just ADD to user.points, we should update. 
-      // This is a logic flaw in the existing code.
-      // However, to strictly answer the USER request about XP:
-      user.xp = (user.xp || 0) + (submission.challenge.xpReward || 200);
-      
-      // Calculer le niveau basé sur les XP
-      user.level = Math.floor(user.xp / 1000) + 1;
-      await user.save();
-      
-      // Vérifier les nouveaux badges
-      await checkAndAwardBadges(user._id);
+    // Mettre à jour les points et l'XP de l'utilisateur (une seule fois)
+    if (!submission.rewarded) {
+      const user = await User.findById(submission.user);
+      if (user && submission.challenge) {
+        // Points for Leaderboard
+        user.points = (user.points || 0) + (submission.pointsEarned || 0);
+        
+        // XP for Leveling (Challenge reward or default 200)
+        const xpToAdd = submission.challenge.xpReward || 200;
+        user.xp = (user.xp || 0) + xpToAdd;
+        
+        // Compute level based on XP (1 level per 1000 XP)
+        user.level = Math.floor(user.xp / 1000) + 1;
+        
+        await user.save();
+        
+        // Marquer la soumission comme récompensée
+        submission.rewarded = true;
+        await submission.save();
+
+        // Vérifier les nouveaux badges
+        await checkAndAwardBadges(user._id);
+      } else if (!user) {
+        console.warn(`⚠️ Utilisateur non trouvé pour la soumission ${submissionId}`);
+      } else if (!submission.challenge) {
+        console.warn(`⚠️ Challenge non trouvé pour la soumission ${submissionId}. Points/XP non attribués.`);
+      }
     }
 
     // Créer une notification pour l'utilisateur
+    const challengeTitle = submission.challenge ? submission.challenge.title : "votre challenge";
     await createNotification({
       recipient: submission.user,
       sender: req.user._id,
       type: 'submission_graded',
-      message: `Votre soumission pour le challenge "${submission.challenge.title}" a été notée. Score: ${submission.finalScore}/100`,
+      message: `Votre soumission pour le challenge "${challengeTitle}" a été notée. Score: ${Math.round(submission.finalScore)}/100`,
       link: `/dashboard/submissions/${submission._id}`
     });
 

@@ -139,18 +139,6 @@ mongoose.connect(process.env.MONGO_URI)
       console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
       console.log(`🌐 CORS activé pour ${process.env.REACT_APP_API_URL}`);
       console.log(`🔌 Socket.io prêt`);
-
-      // 🔄 Keep-alive pour Render (évite que le backend s'endorme)
-      const RELOAD_URL = "https://challenge-express.onrender.com/api/auth/ping";
-      const https = require("https");
-      
-      setInterval(() => {
-        https.get(RELOAD_URL, (res) => {
-          console.log(`📡 Keep-alive: Status ${res.statusCode}`);
-        }).on('error', (err) => {
-          console.error("❌ Keep-alive error:", err.message);
-        });
-      }, 14 * 60 * 1000); // Toutes les 14 minutes
     });
   })
   .catch(err => {
